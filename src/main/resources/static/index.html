@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Downtime Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        input {
+            padding: 8px;
+            margin: 5px;
+            width: 28%;
+        }
+
+        button {
+            padding: 8px 12px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+        }
+
+        .add-btn { background-color: #28a745; color: white; }
+        .update-btn { background-color: #007bff; color: white; }
+        .delete-btn { background-color: #dc3545; color: white; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #343a40;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Downtime Tracker - Systems</h2>
+
+    <input type="hidden" id="systemId">
+    <input type="text" id="environment" placeholder="Environment">
+    <input type="text" id="owner" placeholder="Owner">
+    <input type="text" id="systemName" placeholder="System Name">
+
+    <button class="add-btn" onclick="saveSystem()">Save</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Environment</th>
+                <th>Owner</th>
+                <th>System Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="systemTableBody">
+        </tbody>
+    </table>
+</div>
+
+<script>
+
+function loadSystems() {
+    fetch("/api/systems")
+        .then(response => response.json())
+        .then(data => {
+            let table = document.getElementById("systemTableBody");
+            table.innerHTML = "";
+
+            data.forEach(system => {
+                let row = `
+                    <tr>
+                        <td>${system.id}</td>
+                        <td>${system.environment}</td>
+                        <td>${system.owner}</td>
+                        <td>${system.systemName}</td>
+                        <td>
+                            <button class="update-btn" onclick="editSystem(${system.id}, '${system.environment}', '${system.owner}', '${system.systemName}')">Edit</button>
+                            <button class="delete-btn" onclick="deleteSystem(${system.id})">Delete</button>
+                        </td>
+                    </tr>
+                `;
+                table.innerHTML += row;
+            });
+        });
+}
+
+function saveSystem() {
+    const id = document.getElementById("systemId").value;
+    const system = {
+        environment: document.getElementById("environment").value,
+        owner: document.getElementById("owner").value,
+        systemName: document.getElementById("systemName").value
+    };
+
+    if (id) {
+        // UPDATE
+        fetch(`/api/systems/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(system)
+        })
+        .then(() => {
+            clearForm();
+            loadSystems();
+        });
+    } else {
+        // CREATE
+        fetch("/api/systems", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(system)
+        })
+        .then(() => {
+            clearForm();
+            loadSystems();
+        });
+    }
+}
+
+function editSystem(id, environment, owner, systemName) {
+    document.getElementById("systemId").value = id;
+    document.getElementById("environment").value = environment;
+    document.getElementById("owner").value = owner;
+    document.getElementById("systemName").value = systemName;
+}
+
+function deleteSystem(id) {
+    if (confirm("Are you sure you want to delete this system?")) {
+        fetch(`/api/systems/${id}`, {
+            method: "DELETE"
+        })
+        .then(() => loadSystems());
+    }
+}
+
+function clearForm() {
+    document.getElementById("systemId").value = "";
+    document.getElementById("environment").value = "";
+    document.getElementById("owner").value = "";
+    document.getElementById("systemName").value = "";
+}
+
+loadSystems();
+
+</script>
+
+</body>
+</html>
